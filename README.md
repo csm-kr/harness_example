@@ -58,10 +58,17 @@ python3 scripts/execute.py {task}
 처음 이 레포를 받았다면, 아래 5단계만 순서대로 따라가면 됩니다.
 
 ### 1️⃣ 레포 클론
+
+실행할 레포 디렉터리로 들어간 뒤, 아래 명령어를 차례로 입력하세요.
+
 ```bash
-git clone <이 레포 URL> my-harness
-cd my-harness
+git clone https://github.com/csm-kr/harness_example .
+rm -rf .git
+git init
 ```
+
+> 💡 `git clone ... .` 은 **현재 디렉터리에 그대로** 클론합니다.
+> 이어서 `rm -rf .git` 으로 원본 히스토리를 제거하고, `git init` 으로 새 git 저장소를 초기화하면 이 뼈대를 템플릿처럼 사용할 수 있습니다.
 
 ### 2️⃣ Claude Code 켜고 **먼저 상의**하기
 > ⚠️ **코드를 직접 고치기 전에 Claude와 1회 정렬 세션을 가지세요.**
