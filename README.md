@@ -47,14 +47,14 @@ docker compose exec harness bash  # 셸로 접속
 
 | 비유 | 자산 | 역할 |
 |------|------|------|
-| § **헌법** | `CLAUDE.md` | 프로젝트가 반드시 따라야 할 원칙 (종류·스택·CRITICAL). 모든 세션에 자동 주입 → 우선순위 1번. |
-| ✎ **협업 원칙** | `LLM_GUIDE.md` | Claude/LLM 4원칙: Think Before Coding / Simplicity First / Surgical Changes / Goal-Driven Execution. `CLAUDE.md` 가 참고. |
-| ◉ **뇌 (의도·지식)** | `docs/PRD.md`, `ARCHITECTURE.md`, `ADR.md` (+ 종류별 추가 docs) | "무엇을 / 누구에게 / 왜 / 어떻게 / 왜 이 결정". 다이어그램·cross-reference 포함. |
-| ☰ **계획서** | `phases/index.json`, `phases/{task}/step{N}.md` | "무엇을, 어떤 순서로". `/harness` 가 생성, `execute.py` 가 step 씩 실행. |
-| ▶ **손 (실행)** | `scripts/execute.py`, `scripts/test_execute.py` | step 순차 실행 + 자가 교정 + 자동 커밋 + 자동 테스트. |
-| ⚡ **신경계 (자동 반응)** | `.claude/settings.json` | `PreToolUse` 위험 명령 차단 / `Stop` 시 자동 테스트. ([HOOKS.md](docs/HOOKS.md)) |
-| ↻ **습관 (반복 능력)** | `.claude/skills/{bootstrap,docker-init,harness,review}.md` + `templates/{type}/` | 슬래시 스킬 4종 + 종류별 템플릿 정본. |
-| ▢ **환경 (몸이 사는 곳)** | `Dockerfile`, `docker-compose.yml` | 격리된 컨테이너. `/docker-init` 이 종류에 맞춰 갱신. |
+| <sub>📜&nbsp;**헌법**</sub> | <sub>`CLAUDE.md`</sub> | <sub>프로젝트가 반드시 따라야 할 원칙 (종류·스택·CRITICAL). 모든 세션에 자동 주입 → 우선순위 1번.</sub> |
+| <sub>🤝&nbsp;**협업&nbsp;원칙**</sub> | <sub>`LLM_GUIDE.md`</sub> | <sub>Claude/LLM 4원칙: Think Before Coding / Simplicity First / Surgical Changes / Goal-Driven Execution. `CLAUDE.md` 가 참고.</sub> |
+| <sub>🧠&nbsp;**뇌&nbsp;(의도·지식)**</sub> | <sub>`docs/PRD.md`, `ARCHITECTURE.md`, `ADR.md` (+ 종류별 추가 docs)</sub> | <sub>"무엇을 / 누구에게 / 왜 / 어떻게 / 왜 이 결정". 다이어그램·cross-reference 포함.</sub> |
+| <sub>📋&nbsp;**계획서**</sub> | <sub>`phases/index.json`, `phases/{task}/step{N}.md`</sub> | <sub>"무엇을, 어떤 순서로". `/harness` 가 생성, `execute.py` 가 step 씩 실행.</sub> |
+| <sub>🦾&nbsp;**손&nbsp;(실행)**</sub> | <sub>`scripts/execute.py`, `scripts/test_execute.py`</sub> | <sub>step 순차 실행 + 자가 교정 + 자동 커밋 + 자동 테스트.</sub> |
+| <sub>🧬&nbsp;**신경계&nbsp;(자동&nbsp;반응)**</sub> | <sub>`.claude/settings.json`</sub> | <sub>`PreToolUse` 위험 명령 차단 / `Stop` 시 자동 테스트. ([HOOKS.md](docs/HOOKS.md))</sub> |
+| <sub>🎓&nbsp;**습관&nbsp;(반복&nbsp;능력)**</sub> | <sub>`.claude/skills/{bootstrap,docker-init,harness,review}.md` + `templates/{type}/`</sub> | <sub>슬래시 스킬 4종 + 종류별 템플릿 정본.</sub> |
+| <sub>🏠&nbsp;**환경&nbsp;(몸이&nbsp;사는&nbsp;곳)**</sub> | <sub>`Dockerfile`, `docker-compose.yml`</sub> | <sub>격리된 컨테이너. `/docker-init` 이 종류에 맞춰 갱신.</sub> |
 
 > 충돌이 생기면 항상 헌법(`CLAUDE.md`)이 우선합니다.
 
