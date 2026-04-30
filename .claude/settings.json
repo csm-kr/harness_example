@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./scripts/run_stop_hook.sh"
+            "command": "python3 scripts/test_execute.py"
           }
         ]
       }
