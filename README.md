@@ -45,16 +45,16 @@ docker compose exec harness bash  # 셸로 접속
 
 각 파일·폴더의 역할을 신체 비유로 보면 한눈에 잡힙니다.
 
-| 비유 — 자산 | 역할 |
-|-----------|------|
-| **헌법** — `CLAUDE.md` | 프로젝트가 반드시 따라야 할 원칙 (종류·스택·CRITICAL 규칙). 모든 세션에 자동 주입 → 우선순위 1번. |
-| **협업 원칙** — `LLM_GUIDE.md` | Claude/LLM 4원칙: Think Before Coding / Simplicity First / Surgical Changes / Goal-Driven Execution. `CLAUDE.md` 가 참고. |
-| **뇌 (의도·지식)** — `docs/PRD.md`, `ARCHITECTURE.md`, `ADR.md` (+ 종류별 추가 docs) | "무엇을 / 누구에게 / 왜 / 어떻게 / 왜 이 결정". 다이어그램·cross-reference 포함. |
-| **계획서** — `phases/index.json`, `phases/{task}/step{N}.md` | "무엇을, 어떤 순서로". `/harness` 가 생성, `execute.py` 가 step 씩 실행. |
-| **손 (실행)** — `scripts/execute.py`, `scripts/test_execute.py` | step 순차 실행 + 자가 교정 + 자동 커밋 + 자동 테스트. |
-| **신경계 (자동 반응)** — `.claude/settings.json` | `PreToolUse` 위험 명령 차단 / `Stop` 시 자동 테스트. ([HOOKS.md](docs/HOOKS.md)) |
-| **습관 (반복 능력)** — `.claude/skills/{bootstrap,docker-init,harness,review}.md` + `templates/{type}/` | 슬래시 스킬 4종 + 종류별 템플릿 정본. |
-| **환경 (몸이 사는 곳)** — `Dockerfile`, `docker-compose.yml` | 격리된 컨테이너. `/docker-init` 이 종류에 맞춰 갱신. |
+| 비유 | 자산 | 역할 |
+|------|------|------|
+| § **헌법** | `CLAUDE.md` | 프로젝트가 반드시 따라야 할 원칙 (종류·스택·CRITICAL). 모든 세션에 자동 주입 → 우선순위 1번. |
+| ✎ **협업 원칙** | `LLM_GUIDE.md` | Claude/LLM 4원칙: Think Before Coding / Simplicity First / Surgical Changes / Goal-Driven Execution. `CLAUDE.md` 가 참고. |
+| ◉ **뇌 (의도·지식)** | `docs/PRD.md`, `ARCHITECTURE.md`, `ADR.md` (+ 종류별 추가 docs) | "무엇을 / 누구에게 / 왜 / 어떻게 / 왜 이 결정". 다이어그램·cross-reference 포함. |
+| ☰ **계획서** | `phases/index.json`, `phases/{task}/step{N}.md` | "무엇을, 어떤 순서로". `/harness` 가 생성, `execute.py` 가 step 씩 실행. |
+| ▶ **손 (실행)** | `scripts/execute.py`, `scripts/test_execute.py` | step 순차 실행 + 자가 교정 + 자동 커밋 + 자동 테스트. |
+| ⚡ **신경계 (자동 반응)** | `.claude/settings.json` | `PreToolUse` 위험 명령 차단 / `Stop` 시 자동 테스트. ([HOOKS.md](docs/HOOKS.md)) |
+| ↻ **습관 (반복 능력)** | `.claude/skills/{bootstrap,docker-init,harness,review}.md` + `templates/{type}/` | 슬래시 스킬 4종 + 종류별 템플릿 정본. |
+| ▢ **환경 (몸이 사는 곳)** | `Dockerfile`, `docker-compose.yml` | 격리된 컨테이너. `/docker-init` 이 종류에 맞춰 갱신. |
 
 > 충돌이 생기면 항상 헌법(`CLAUDE.md`)이 우선합니다.
 
