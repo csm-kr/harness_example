@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  harness:
+    build: .
+    image: harness_framework
+    container_name: harness_dev
+    volumes:
+      - .:/workspace/harness_framework
+      - ~/.claude:/home/docker_user/.claude   # 웹 인증 토큰 유지
+    ports:
+      - "6007:6006"   # TensorBoard
+    stdin_open: true
+    tty: true
+    working_dir: /workspace/harness_framework
+    command: bash
