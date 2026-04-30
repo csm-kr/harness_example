@@ -24,7 +24,7 @@
 
 ```bash
 # 1. 클론 — 빈 디렉터리 안에서
-git clone https://github.com/csm-kr/harness_example .
+git clone https://github.com/csm-kr/harness_framework .
 rm -rf .git
 git init
 
