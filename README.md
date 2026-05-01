@@ -17,29 +17,60 @@
 | 2. `/bootstrap` | 종류별 docs 뼈대를 `docs/` 에 깐다 | Claude Code |
 | 3. docs 채우기 | `PRD.md → ARCHITECTURE.md → ADR.md` 순서로 본문 채움 | Claude 와 함께 |
 | 4. `/docker-init` | 종류·스택에 맞는 격리 환경을 `env_docker/` 안에 생성 — `Dockerfile` (멀티스테이지) + `docker-compose.yml` + 사이드 서비스 형제 | Claude Code |
-| 5. `up` & `exec` | 컨테이너 띄우고 셸로 진입 | 호스트 셸 (아래 코드블록) |
+| 5. 컨테이너 진입 | **VS Code/Cursor Dev Containers (권장)** 또는 호스트 셸로 직접 | 호스트 IDE / 셸 |
 | 6. `/harness` → `execute.py` | 첫 phase 설계 → step 순차 실행 | 컨테이너 안의 Claude Code |
 
-호스트 셸 명령:
+전체 흐름 (호스트 셸 + Claude Code 슬래시 명령):
 
 ```bash
-# 1. 클론 — 빈 디렉터리 안에서
+# ─── 1. 클론 (호스트 셸) ─────────────────────────────────────────
 git clone https://github.com/csm-kr/harness_framework .
 rm -rf .git
 git init
 
-# 5. 컨테이너 진입 (4번 /docker-init 을 마친 뒤)
+
+# ─── 2~4. 호스트에서 Claude Code 띄워 슬래시 명령 ────────────────
+claude            # 호스트 Claude Code 세션 시작 (IDE 의 Claude 확장도 OK)
+
+#   Claude 안에서 차례대로:
+#     /bootstrap            → 2. 종류·docs/ 뼈대 결정 (대안 제시 형태)
+#                             3. docs/PRD.md → ARCHITECTURE.md → ADR.md 본문을
+#                                Claude 와 함께 채움 (이 단계가 사실상 가장 오래 걸림)
+#     /docker-init          → 4. env_docker/{Dockerfile,docker-compose.yml,...} 생성
+#
+#   끝나면 호스트 Claude 세션은 종료해도 됨 (대화 히스토리는 컨테이너로 이어지지 않음).
+
+
+# ─── 5. 컨테이너 진입 — 두 가지 중 하나 ──────────────────────────
+
+# (A) Dev Containers 확장 (권장 — IDE 자체를 컨테이너에 붙임)
+#   VS Code / Cursor 에서:
+#   ① "Dev Containers" 확장 설치 (없으면)
+#   ② 명령 팔레트 → "Dev Containers: Reopen in Container"
+#   ③ env_docker/docker-compose.yml 의 dev 서비스를 선택
+#   → 터미널·언어 서버·디버거가 모두 컨테이너 환경에서 동작.
+#     아래 (B) 의 docker compose up/exec 도 자동으로 처리됨.
+
+# (B) 호스트 셸로 직접
 docker compose -f env_docker/docker-compose.yml up -d --build       # 백그라운드 띄움
 docker compose -f env_docker/docker-compose.yml exec dev bash       # 셸로 접속
-# (또는 /docker-init 이 함께 만든 Makefile 로 단축: make up && make shell)
-# 셸 안에서:
-claude                                                              # 이후 Claude Code 작업은 컨테이너 안에서
+# (또는 /docker-init 이 함께 만든 Makefile 로: make up && make shell)
+
+
+# ─── 6. 컨테이너 안에서 Claude 새 세션 시작 → /harness → execute.py ─
+claude                       # 컨테이너 Claude Code (호스트 세션과 별개)
+
+#   Claude 안에서:
+#     /harness               → 첫 phase 설계 (phases/{task}/step{N}.md 생성)
+#     python3 scripts/execute.py {task}   → step 순차 실행 + 자동 커밋
 ```
 
 요점:
 - `/bootstrap` 은 프로젝트명·한 줄 목적·종류(`web` / `mobile` / `backend` / `ai-ml` / `data-pipeline` / `cli-lib` / `custom`)를 **대안 제시 형태**로 묻고, 고른 종류에 맞춰 `docs/` 에 PRD/ARCHITECTURE/ADR + 추가 docs 를 깐다.
 - 각 docs 맨 위 "이 문서가 답하는 질문" 헤더가 무엇을 적을지 안내. 본문은 `{}` 플레이스홀더로 남아 있고 사용자가 Claude 와 함께 채운다.
 - 종류별 추가 docs (예: `web` → `UI_GUIDE.md`, `ai-ml` → `DATA_CARD.md`) 도 같은 방식.
+- **단계 1~4 는 호스트의 Claude Code 세션** (단순 파일 생성이라 호스트엔 Docker 만 있어도 OK). **단계 5 부터는 컨테이너 안의 새 Claude Code 세션** — 두 세션은 별개이므로 컨테이너 첫 메시지에서 `docs/` 와 `CLAUDE.md` 를 다시 읽도록 지시 (`/harness` 가 자동 처리).
+- IDE 관점: 파일은 bind mount 라 호스트 IDE 에서도 그대로 보이지만 빌드·테스트·`claude` 실행은 반드시 컨테이너 안. **Dev Containers 확장으로 IDE 자체를 컨테이너에 붙이는 게 가장 깔끔** — 터미널·확장·디버거가 모두 컨테이너 환경에서 일관되게 동작.
 - `exec` 로 들어간 셸은 `exit` 해도 컨테이너는 살아 있다. 작업을 완전히 마쳤을 때만 `docker compose -f env_docker/docker-compose.yml down` (또는 `make down`).
 - **호스트는 Docker 만 있다고 가정**. Python·Node 등 모든 런타임·도구는 dev 컨테이너 안에 살고, `claude` 도 그 안에서 실행한다. 호스트에서 `claude` 를 띄울 거라면 `.claude/skills/docker-init.md` 의 "Stop hook 옵션 B" 를 참고.
 
