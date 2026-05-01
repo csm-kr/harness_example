@@ -16,7 +16,7 @@
 | 1. 클론 | 빈 디렉터리에 이 뼈대 정본을 깐다 | 호스트 셸 (아래 코드블록) |
 | 2. `/bootstrap` | 종류별 docs 뼈대를 `docs/` 에 깐다 | Claude Code |
 | 3. docs 채우기 | `PRD.md → ARCHITECTURE.md → ADR.md` 순서로 본문 채움 | Claude 와 함께 |
-| 4. `/docker-init` | `docs/` 정보로 `Dockerfile` / `docker-compose.yml` 갱신 | Claude Code |
+| 4. `/docker-init` | 종류·스택에 맞는 격리 환경을 `env_docker/` 안에 생성 — `Dockerfile` (멀티스테이지) + `docker-compose.yml` + 사이드 서비스 형제 | Claude Code |
 | 5. `up` & `exec` | 컨테이너 띄우고 셸로 진입 | 호스트 셸 (아래 코드블록) |
 | 6. `/harness` → `execute.py` | 첫 phase 설계 → step 순차 실행 | 컨테이너 안의 Claude Code |
 
@@ -28,16 +28,20 @@ git clone https://github.com/csm-kr/harness_framework .
 rm -rf .git
 git init
 
-# 5. 컨테이너 진입
-docker compose up -d --build      # 백그라운드 띄움
-docker compose exec harness bash  # 셸로 접속
+# 5. 컨테이너 진입 (4번 /docker-init 을 마친 뒤)
+docker compose -f env_docker/docker-compose.yml up -d --build       # 백그라운드 띄움
+docker compose -f env_docker/docker-compose.yml exec dev bash       # 셸로 접속
+# (또는 /docker-init 이 함께 만든 Makefile 로 단축: make up && make shell)
+# 셸 안에서:
+claude                                                              # 이후 Claude Code 작업은 컨테이너 안에서
 ```
 
 요점:
 - `/bootstrap` 은 프로젝트명·한 줄 목적·종류(`web` / `mobile` / `backend` / `ai-ml` / `data-pipeline` / `cli-lib` / `custom`)를 **대안 제시 형태**로 묻고, 고른 종류에 맞춰 `docs/` 에 PRD/ARCHITECTURE/ADR + 추가 docs 를 깐다.
 - 각 docs 맨 위 "이 문서가 답하는 질문" 헤더가 무엇을 적을지 안내. 본문은 `{}` 플레이스홀더로 남아 있고 사용자가 Claude 와 함께 채운다.
 - 종류별 추가 docs (예: `web` → `UI_GUIDE.md`, `ai-ml` → `DATA_CARD.md`) 도 같은 방식.
-- `exec` 로 들어간 셸은 `exit` 해도 컨테이너는 살아 있다. 작업을 완전히 마쳤을 때만 `docker compose down`.
+- `exec` 로 들어간 셸은 `exit` 해도 컨테이너는 살아 있다. 작업을 완전히 마쳤을 때만 `docker compose -f env_docker/docker-compose.yml down` (또는 `make down`).
+- **호스트는 Docker 만 있다고 가정**. Python·Node 등 모든 런타임·도구는 dev 컨테이너 안에 살고, `claude` 도 그 안에서 실행한다. 호스트에서 `claude` 를 띄울 거라면 `.claude/skills/docker-init.md` 의 "Stop hook 옵션 B" 를 참고.
 
 ---
 
@@ -54,7 +58,7 @@ docker compose exec harness bash  # 셸로 접속
 | <sub>🦾&nbsp;**손&nbsp;(실행)**</sub> | <sub>`scripts/execute.py`, `scripts/test_execute.py`</sub> | <sub>step 순차 실행 + 자가 교정 + 자동 커밋 + 자동 테스트.</sub> |
 | <sub>🧬&nbsp;**신경계&nbsp;(자동&nbsp;반응)**</sub> | <sub>`.claude/settings.json`</sub> | <sub>`PreToolUse` 위험 명령 차단 / `Stop` 시 자동 테스트. ([HOOKS.md](docs/HOOKS.md))</sub> |
 | <sub>🎓&nbsp;**습관&nbsp;(반복&nbsp;능력)**</sub> | <sub>`.claude/skills/{bootstrap,docker-init,harness,review}.md` + `templates/{type}/`</sub> | <sub>슬래시 스킬 4종 + 종류별 템플릿 정본.</sub> |
-| <sub>🏠&nbsp;**환경&nbsp;(몸이&nbsp;사는&nbsp;곳)**</sub> | <sub>`Dockerfile`, `docker-compose.yml`</sub> | <sub>격리된 컨테이너. `/docker-init` 이 종류에 맞춰 갱신.</sub> |
+| <sub>🏠&nbsp;**환경&nbsp;(몸이&nbsp;사는&nbsp;곳)**</sub> | <sub>`env_docker/{Dockerfile,docker-compose.yml,...}` (생성물) ← `.claude/skills/docker_examples/` (참고 예시)</sub> | <sub>격리된 컨테이너. `/docker-init` 이 예시 패턴을 참고해 종류·스택에 맞게 dev 컨테이너 + 사이드 서비스를 형제로 생성. 환경 도커 파일 일체가 `env_docker/` 한 폴더에 — 루트는 사용자 프로젝트 영역으로 비워둠. **호스트는 Docker 만 있다고 가정** — 모든 런타임·도구는 컨테이너 안.</sub> |
 
 > 충돌이 생기면 항상 헌법(`CLAUDE.md`)이 우선합니다.
 
@@ -68,7 +72,7 @@ docker compose exec harness bash  # 셸로 접속
 1. /bootstrap          → docs/ 에 종류별 뼈대 깔림
         ↓ 사용자가 docs/PRD → ARCH → ADR 본문 채움 (Claude 와 함께)
         ↓
-2. /docker-init        → Dockerfile / docker-compose.yml 갱신
+2. /docker-init        → env_docker/{Dockerfile, docker-compose.yml, ...} 생성
         ↓
 3. /harness            → phases/{task}/step{N}.md 생성
         ↓
@@ -99,13 +103,15 @@ docker compose exec harness bash  # 셸로 접속
 | `docs/ADR.md` | "왜 이 결정" — 트레이드오프 기록 |
 | `docs/HOOKS.md` | 이 레포의 정본 hook 2개 설명 + 공식 문서 링크 |
 | `docs/{종류별 추가}` | 예: web → `UI_GUIDE.md`, `ACCESSIBILITY.md` / ai-ml → `DATA_CARD.md`, `MODEL_CARD.md`, `EVAL_PROTOCOL.md`, `EXPERIMENTS.md` |
-| `Dockerfile`, `docker-compose.yml` | 격리된 개발 환경 (샘플 — `/docker-init` 에서 갱신) |
+| `env_docker/{Dockerfile,docker-compose.yml,.dockerignore,docker-entrypoint.sh}` | 환경 도커 파일 일체 (멀티스테이지 + 서비스 토폴로지). `/docker-init` 이 생성. 기본 클론에는 없음. 루트는 사용자 프로젝트 자체 도커 영역으로 비워둠 |
+| `Makefile` (루트, 옵션) | `make up` / `make shell` 로 `docker compose -f env_docker/docker-compose.yml ...` 단축 |
 | `scripts/execute.py` | step 순차 실행 + 자가 교정 + 자동 커밋 |
 | `scripts/test_execute.py` | pytest 기반 자동 검증 (Stop hook 이 매 응답 종료 시 실행) |
 | `phases/{task}/...` | `/harness` 가 생성한 step 파일과 진행 상태 |
 | `.claude/settings.json` | Claude Code hooks (PreToolUse 차단, Stop 자동 검증) |
 | `.claude/skills/{bootstrap,docker-init,harness,review}.md` | 슬래시 스킬 정본 |
 | `.claude/skills/templates/{type}/` | bootstrap 이 종류별로 `docs/` 에 복사하는 정본 (PRD/ARCH/ADR + 추가 docs) |
+| `.claude/skills/docker_examples/{Dockerfile,docker-compose.yml}` | `/docker-init` 이 참고하는 컨테이너 예시 (정본 — 손대지 않음). 환경은 프로젝트마다 달라지므로 패턴만 참고 |
 
 ---
 

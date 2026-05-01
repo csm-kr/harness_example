@@ -36,7 +36,7 @@
 규칙: 새 결정은 ADR 항목으로. 새 사용자 시나리오는 PRD 갱신. 새 컴포넌트/모듈은 ARCHITECTURE 갱신.
 
 ## 주요 명령어
-컨테이너 안에서 실행 (호스트에서는 의존성 누락 가능):
+**호스트에는 Docker 만 있다고 가정.** 아래 명령은 모두 dev 컨테이너 안에서 실행한다 (`docker compose -f env_docker/docker-compose.yml exec dev bash` 또는 `make shell` 후):
 
 ```bash
 {빌드 / 컴파일}            # 예: npm run build / poetry install / cargo build

@@ -47,7 +47,7 @@ bootstrap 은 한 줄도 본문을 작성하지 않는다.
 | 종류별 템플릿 정본 | `.claude/skills/templates/{web,mobile,backend,ai-ml,data-pipeline,cli-lib}/*.md` |
 | 훅 | `.claude/settings.json` |
 | 스크립트 | `scripts/{execute,test_execute}.py` |
-| 컨테이너(샘플) | `Dockerfile`, `docker-compose.yml` |
+| 컨테이너 참고 예시 | `.claude/skills/docker_examples/{Dockerfile,docker-compose.yml}` |
 | 헌법 / 협업 가이드 | `CLAUDE.md`, `LLM_GUIDE.md` |
 | 도메인 docs | `docs/{PRD,ARCHITECTURE,ADR,HOOKS}.md` |
 
@@ -126,7 +126,7 @@ bootstrap 은 한 줄도 본문을 작성하지 않는다.
 **손대지 않는 것** (사용자 답에 따라 절대 바꾸지 마라):
 - `CLAUDE.md` — 정본 유지. 플레이스홀더는 사용자가 본문 결정 후 직접 채운다.
 - `LLM_GUIDE.md`, `docs/HOOKS.md` — 정본 유지.
-- `.claude/settings.json`, `.claude/skills/*`, `scripts/*`, `Dockerfile`, `docker-compose.yml`.
+- `.claude/settings.json`, `.claude/skills/*` (참고 예시 `.claude/skills/docker_examples/` 포함), `scripts/*`.
 
 **부수**: `phases/index.json` 이 없으면 `{"phases": []}` 로 생성. 있으면 손대지 마라.
 
@@ -154,8 +154,8 @@ bootstrap 은 한 줄도 본문을 작성하지 않는다.
 1. docs/PRD.md → ARCHITECTURE.md → ADR.md 순서로 본문을 채우세요. Claude 와 함께 작업하면 빠릅니다.
    (각 파일 맨 위 "이 문서가 답하는 질문" 헤더가 어디에 무엇을 적을지 안내합니다.)
 2. 종류별 추가 docs 도 같은 방식으로 채우세요 (예: web 의 UI_GUIDE.md, ai-ml 의 DATA_CARD.md).
-3. 채운 뒤 새 메시지에서 /docker-init 을 호출해 컨테이너 환경을 정하세요.
-4. docker compose up -d --build && docker compose exec harness bash 로 컨테이너 진입.
+3. 채운 뒤 새 메시지에서 /docker-init 을 호출하세요. 종류·스택에 맞는 격리 환경 일체(`env_docker/{Dockerfile,docker-compose.yml,...}`)를 한 폴더 안에 만듭니다 — 호스트는 Docker 만 있다고 가정합니다.
+4. `docker compose -f env_docker/docker-compose.yml up -d --build && docker compose -f env_docker/docker-compose.yml exec dev bash` (또는 `make up && make shell`) 로 컨테이너 진입. 셸 안에서 `claude` 를 실행해 이후 작업을 컨테이너 안에서 합니다.
 5. /harness 로 첫 phase 를 설계하세요.
 ```
 
@@ -167,7 +167,7 @@ bootstrap 은 한 줄도 본문을 작성하지 않는다.
 
 - **본문을 채우지 마라.** PRD/ARCHITECTURE/ADR 의 `{}` 플레이스홀더는 사용자가 직접 채운다.
 - **묵묵히 추측하지 마라.** 답이 모호한 자리에서는 항상 대안 2~4개를 제시한다 ([LLM_GUIDE.md](../../LLM_GUIDE.md) 1·4 원칙).
-- **정본 파일을 사용자 답에 따라 바꾸지 마라.** `.claude/settings.json`, `.claude/skills/*`, `scripts/*`, `docs/HOOKS.md`, `LLM_GUIDE.md`, `Dockerfile`, `docker-compose.yml`.
+- **정본 파일을 사용자 답에 따라 바꾸지 마라.** `.claude/settings.json`, `.claude/skills/*` (참고 예시 `.claude/skills/docker_examples/` 포함), `scripts/*`, `docs/HOOKS.md`, `LLM_GUIDE.md`.
 - **CLAUDE.md 의 플레이스홀더를 채우지 마라.** 결정의 깊이는 본문 작성 단계의 것이다.
 - **Dockerfile / compose 를 만들지 마라.** `docker-init` 책임이다.
 - **6렌즈, CRITICAL 능동 도출, 위험 매핑, 자체 검증 10항목 같은 무거운 절차를 부활시키지 마라.** 가벼운 스킬 의도와 정면 충돌한다.
