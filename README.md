@@ -20,30 +20,49 @@
 | 5. 컨테이너 진입 | **VS Code/Cursor Dev Containers (권장)** 또는 호스트 셸로 직접 | 호스트 IDE / 셸 |
 | 6. `/harness` → `execute.py` | 첫 phase 설계 → step 순차 실행 | 컨테이너 안의 Claude Code |
 
-호스트 셸 명령:
+전체 흐름 (호스트 셸 + Claude Code 슬래시 명령):
 
 ```bash
-# 1. 클론 — 빈 디렉터리 안에서
+# ─── 1. 클론 (호스트 셸) ─────────────────────────────────────────
 git clone https://github.com/csm-kr/harness_framework .
 rm -rf .git
 git init
 
-# 5. 컨테이너 진입 (4번 /docker-init 을 마친 뒤) — 두 가지 중 하나
 
-# (A) Dev Containers 확장 (권장)
+# ─── 2~4. 호스트에서 Claude Code 띄워 슬래시 명령 ────────────────
+claude            # 호스트 Claude Code 세션 시작 (IDE 의 Claude 확장도 OK)
+
+#   Claude 안에서 차례대로:
+#     /bootstrap            → 2. 종류·docs/ 뼈대 결정 (대안 제시 형태)
+#                             3. docs/PRD.md → ARCHITECTURE.md → ADR.md 본문을
+#                                Claude 와 함께 채움 (이 단계가 사실상 가장 오래 걸림)
+#     /docker-init          → 4. env_docker/{Dockerfile,docker-compose.yml,...} 생성
+#
+#   끝나면 호스트 Claude 세션은 종료해도 됨 (대화 히스토리는 컨테이너로 이어지지 않음).
+
+
+# ─── 5. 컨테이너 진입 — 두 가지 중 하나 ──────────────────────────
+
+# (A) Dev Containers 확장 (권장 — IDE 자체를 컨테이너에 붙임)
 #   VS Code / Cursor 에서:
 #   ① "Dev Containers" 확장 설치 (없으면)
 #   ② 명령 팔레트 → "Dev Containers: Reopen in Container"
 #   ③ env_docker/docker-compose.yml 의 dev 서비스를 선택
-#   → IDE 자체가 컨테이너 안에서 동작 (터미널·언어 서버·디버거 모두 컨테이너 환경).
-#     claude 도 그 통합 터미널에서 실행하면 컨테이너 세션이 됨.
+#   → 터미널·언어 서버·디버거가 모두 컨테이너 환경에서 동작.
+#     아래 (B) 의 docker compose up/exec 도 자동으로 처리됨.
 
 # (B) 호스트 셸로 직접
 docker compose -f env_docker/docker-compose.yml up -d --build       # 백그라운드 띄움
 docker compose -f env_docker/docker-compose.yml exec dev bash       # 셸로 접속
 # (또는 /docker-init 이 함께 만든 Makefile 로: make up && make shell)
-# 셸 안에서:
-claude                                                              # 이후 Claude Code 작업은 컨테이너 안에서
+
+
+# ─── 6. 컨테이너 안에서 Claude 새 세션 시작 → /harness → execute.py ─
+claude                       # 컨테이너 Claude Code (호스트 세션과 별개)
+
+#   Claude 안에서:
+#     /harness               → 첫 phase 설계 (phases/{task}/step{N}.md 생성)
+#     python3 scripts/execute.py {task}   → step 순차 실행 + 자동 커밋
 ```
 
 요점:
