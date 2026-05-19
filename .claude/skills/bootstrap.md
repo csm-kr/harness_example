@@ -45,6 +45,7 @@ bootstrap 은 한 줄도 본문을 작성하지 않는다.
 |---------|------|
 | 스킬 | `.claude/skills/{bootstrap,harness,docker-init,review}.md` |
 | 종류별 템플릿 정본 | `.claude/skills/templates/{web,mobile,backend,ai-ml,data-pipeline,cli-lib}/*.md` |
+| 공용 템플릿 정본 | `.claude/skills/templates/PRD_VIEW.md` (PRD 검수 13 View) |
 | 훅 | `.claude/settings.json` |
 | 스크립트 | `scripts/{execute,test_execute}.py` |
 | 컨테이너 참고 예시 | `.claude/skills/docker_examples/{Dockerfile,docker-compose.yml}` |
@@ -104,16 +105,18 @@ bootstrap 은 한 줄도 본문을 작성하지 않는다.
 
 **bootstrap 의 본 작업.** `.claude/skills/templates/{type}/` 의 **모든 `.md` 파일**을 `docs/` 로 디렉터리 통째 복사한다 (이름 보존). 종류별로 파일 개수·이름이 다르다 — bootstrap 은 디렉터리를 스캔만 하고 본문은 그대로다.
 
-종류별로 깔리는 docs 예 (현재 정본 기준):
-- `web`: PRD, ARCHITECTURE, ADR, UI_GUIDE, ACCESSIBILITY (5개)
-- `mobile`: PRD, ARCHITECTURE, ADR, RELEASE, PUSH (5개)
-- `backend`: PRD, ARCHITECTURE, ADR, API_SPEC, MIGRATIONS (5개)
-- `ai-ml`: PRD, ARCHITECTURE, ADR, EXPERIMENTS, DATA_CARD, MODEL_CARD, EVAL_PROTOCOL (7개)
-- `data-pipeline`: PRD, ARCHITECTURE, ADR, DATA_CONTRACTS, RUNBOOK (5개)
-- `cli-lib`: PRD, ARCHITECTURE, ADR, API_REFERENCE, MIGRATION (5개)
+추가로 **공용 파일** `.claude/skills/templates/PRD_VIEW.md` 를 `docs/PRD_VIEW.md` 로 함께 복사한다. 이 파일은 종류 무관 PRD 검수 13 View 렌즈로, 사용자가 `PRD.md` 본문을 채울 때 체크리스트로 사용한다.
+
+종류별로 깔리는 docs 예 (현재 정본 기준, **공용 PRD_VIEW.md 포함**):
+- `web`: PRD, ARCHITECTURE, ADR, UI_GUIDE, ACCESSIBILITY + PRD_VIEW (6개)
+- `mobile`: PRD, ARCHITECTURE, ADR, RELEASE, PUSH + PRD_VIEW (6개)
+- `backend`: PRD, ARCHITECTURE, ADR, API_SPEC, MIGRATIONS + PRD_VIEW (6개)
+- `ai-ml`: PRD, ARCHITECTURE, ADR, EXPERIMENTS, DATA_CARD, MODEL_CARD, EVAL_PROTOCOL + PRD_VIEW (8개)
+- `data-pipeline`: PRD, ARCHITECTURE, ADR, DATA_CONTRACTS, RUNBOOK + PRD_VIEW (6개)
+- `cli-lib`: PRD, ARCHITECTURE, ADR, API_REFERENCE, MIGRATION + PRD_VIEW (6개)
 
 **복사 전 — 현재 `docs/` 상태 판단**:
-- `docs/{PRD,ARCHITECTURE,ADR}.md` 안 `{` 가 5개 이상 + 30줄 이하 → **정본 상태**로 판단 → 무백업 덮어쓰기.
+- `docs/{PRD,ARCHITECTURE,ADR}.md` 안 `{` 가 5개 이상 + 30줄 이하 → **정본 상태**로 판단 → 무백업 덮어쓰기 (`docs/PRD_VIEW.md` 도 함께 덮어쓰기).
 - 그 외 → **사용자 콘텐츠 의심** → 사용자에게 다음 대안 제시:
   ```
   기존 docs 에 콘텐츠가 있어 보입니다. 어떻게 할까요?
@@ -137,7 +140,8 @@ bootstrap 은 한 줄도 본문을 작성하지 않는다.
 ```
 [bootstrap 결과 — {프로젝트명} / 종류: {type}]
 - 인프라 정본 (.claude, scripts, settings.json, HOOKS.md, LLM_GUIDE.md): ✅ 확인
-- docs/ 깔린 파일: {N}개 (PRD, ARCHITECTURE, ADR, {추가 docs 목록})
+- docs/ 깔린 파일: {N}개 (PRD, ARCHITECTURE, ADR, {추가 docs 목록}, PRD_VIEW)
+- PRD_VIEW.md: 🆕 13 View 검수 렌즈 (공용 — PRD 본문 작성 시 체크리스트로 사용)
 - CLAUDE.md: 🔒 정본 유지 (사용자가 직접 채우세요)
 - phases/index.json: 🆕 빈 배열 생성 / 🔒 기존 유지
 - docs/_archive/{ts}/: 🆕 기존 docs 이동됨 (해당 시에만)
@@ -153,6 +157,8 @@ bootstrap 은 한 줄도 본문을 작성하지 않는다.
 다음 단계:
 1. docs/PRD.md → ARCHITECTURE.md → ADR.md 순서로 본문을 채우세요. Claude 와 함께 작업하면 빠릅니다.
    (각 파일 맨 위 "이 문서가 답하는 질문" 헤더가 어디에 무엇을 적을지 안내합니다.)
+   👉 **PRD.md 본문을 채울 때는 `docs/PRD_VIEW.md` 의 13 View 질문을 체크리스트로 함께 보세요.**
+      각 View 의 "도메인 적용 가이드" 항목을 이 프로젝트 도메인에 맞게 구체화하면 빠진 관점이 줄어듭니다.
 2. 종류별 추가 docs 도 같은 방식으로 채우세요 (예: web 의 UI_GUIDE.md, ai-ml 의 DATA_CARD.md).
 3. 채운 뒤 새 메시지에서 /docker-init 을 호출하세요. 종류·스택에 맞는 격리 환경 일체(`env_docker/{Dockerfile,docker-compose.yml,...}`)를 한 폴더 안에 만듭니다 — 호스트는 Docker 만 있다고 가정합니다.
 4. `docker compose -f env_docker/docker-compose.yml up -d --build && docker compose -f env_docker/docker-compose.yml exec dev bash` (또는 `make up && make shell`) 로 컨테이너 진입. 셸 안에서 `claude` 를 실행해 이후 작업을 컨테이너 안에서 합니다.
