@@ -54,6 +54,7 @@ class StepExecutor:
     """Phase 디렉토리 안의 step들을 순차 실행하는 하네스."""
 
     MAX_RETRIES = 3
+    DEFAULT_TIMEOUT_SEC = 1800
     FEAT_MSG = "feat({phase}): step {num} — {name}"
     CHORE_MSG = "chore({phase}): step {num} output"
     TZ = timezone(timedelta(hours=9))
@@ -197,7 +198,8 @@ class StepExecutor:
         return "## 이전 Step 산출물\n\n" + "\n".join(lines) + "\n\n"
 
     def _build_preamble(self, guardrails: str, step_context: str,
-                        prev_error: Optional[str] = None) -> str:
+                        prev_error: Optional[str] = None,
+                        max_attempts: Optional[int] = None) -> str:
         commit_example = self.FEAT_MSG.format(
             phase=self._phase_name, num="N", name="<step-name>"
         )
@@ -207,6 +209,7 @@ class StepExecutor:
                 f"\n## ⚠ 이전 시도 실패 — 아래 에러를 반드시 참고하여 수정하라\n\n"
                 f"{prev_error}\n\n---\n\n"
             )
+        attempts = max_attempts if max_attempts is not None else self.MAX_RETRIES
         return (
             f"당신은 {self._project} 프로젝트의 개발자입니다. 아래 step을 수행하세요.\n\n"
             f"{guardrails}\n\n---\n\n"
@@ -218,7 +221,7 @@ class StepExecutor:
             f"4. AC(Acceptance Criteria) 검증을 직접 실행하라.\n"
             f"5. /phases/{self._phase_dir_name}/index.json의 해당 step status를 업데이트하라:\n"
             f"   - AC 통과 → \"completed\" + \"summary\" 필드에 이 step의 산출물을 한 줄로 요약\n"
-            f"   - {self.MAX_RETRIES}회 수정 시도 후에도 실패 → \"error\" + \"error_message\" 기록\n"
+            f"   - {attempts}회 수정 시도 후에도 실패 → \"error\" + \"error_message\" 기록\n"
             f"   - 사용자 개입이 필요한 경우 (API 키, 인증, 수동 설정 등) → \"blocked\" + \"blocked_reason\" 기록 후 즉시 중단\n"
             f"6. 모든 변경사항을 커밋하라:\n"
             f"   {commit_example}\n\n---\n\n"
@@ -235,9 +238,10 @@ class StepExecutor:
             sys.exit(1)
 
         prompt = preamble + step_file.read_text()
+        timeout_sec = step.get("timeout_sec", self.DEFAULT_TIMEOUT_SEC)
         result = subprocess.run(
             ["claude", "-p", "--dangerously-skip-permissions", "--output-format", "json", prompt],
-            cwd=self._root, capture_output=True, text=True, timeout=1800,
+            cwd=self._root, capture_output=True, text=True, timeout=timeout_sec,
         )
 
         if result.returncode != 0:
@@ -291,19 +295,28 @@ class StepExecutor:
     # --- 실행 루프 ---
 
     def _execute_single_step(self, step: dict, guardrails: str) -> bool:
-        """단일 step 실행 (재시도 포함). 완료되면 True, 실패/차단이면 False."""
+        """단일 step 실행 (재시도 포함). 완료되면 True, 실패/차단이면 False.
+
+        step.max_retries 는 *재시도 횟수* (0 이면 재시도 없이 1회 시도). 누락 시
+        기존 동작(self.MAX_RETRIES 회 총 시도)을 유지한다.
+        """
         step_num, step_name = step["step"], step["name"]
         done = sum(1 for s in self._read_json(self._index_file)["steps"] if s["status"] == "completed")
         prev_error = None
 
-        for attempt in range(1, self.MAX_RETRIES + 1):
+        if "max_retries" in step:
+            max_attempts = max(1, step["max_retries"] + 1)
+        else:
+            max_attempts = self.MAX_RETRIES
+
+        for attempt in range(1, max_attempts + 1):
             index = self._read_json(self._index_file)
             step_context = self._build_step_context(index)
-            preamble = self._build_preamble(guardrails, step_context, prev_error)
+            preamble = self._build_preamble(guardrails, step_context, prev_error, max_attempts)
 
             tag = f"Step {step_num}/{self._total - 1} ({done} done): {step_name}"
             if attempt > 1:
-                tag += f" [retry {attempt}/{self.MAX_RETRIES}]"
+                tag += f" [retry {attempt}/{max_attempts}]"
 
             with progress_indicator(tag) as pi:
                 self._invoke_claude(step, preamble)
@@ -338,23 +351,23 @@ class StepExecutor:
                 "Step did not update status",
             )
 
-            if attempt < self.MAX_RETRIES:
+            if attempt < max_attempts:
                 for s in index["steps"]:
                     if s["step"] == step_num:
                         s["status"] = "pending"
                         s.pop("error_message", None)
                 self._write_json(self._index_file, index)
                 prev_error = err_msg
-                print(f"  ↻ Step {step_num}: retry {attempt}/{self.MAX_RETRIES} — {err_msg}")
+                print(f"  ↻ Step {step_num}: retry {attempt}/{max_attempts} — {err_msg}")
             else:
                 for s in index["steps"]:
                     if s["step"] == step_num:
                         s["status"] = "error"
-                        s["error_message"] = f"[{self.MAX_RETRIES}회 시도 후 실패] {err_msg}"
+                        s["error_message"] = f"[{max_attempts}회 시도 후 실패] {err_msg}"
                         s["failed_at"] = ts
                 self._write_json(self._index_file, index)
                 self._commit_step(step_num, step_name)
-                print(f"  ✗ Step {step_num}: {step_name} failed after {self.MAX_RETRIES} attempts [{elapsed}s]")
+                print(f"  ✗ Step {step_num}: {step_name} failed after {max_attempts} attempts [{elapsed}s]")
                 print(f"    Error: {err_msg}")
                 self._update_top_index("error")
                 sys.exit(1)

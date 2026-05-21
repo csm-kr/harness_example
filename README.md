@@ -88,7 +88,7 @@ claude                       # 컨테이너 Claude Code (호스트 세션과 별
 | <sub>📋&nbsp;**계획서**</sub> | <sub>`phases/index.json`, `phases/{task}/step{N}.md`</sub> | <sub>"무엇을, 어떤 순서로". `/harness` 가 생성, `execute.py` 가 step 씩 실행.</sub> |
 | <sub>🦾&nbsp;**손&nbsp;(실행)**</sub> | <sub>`scripts/execute.py`, `scripts/test_execute.py`</sub> | <sub>step 순차 실행 + 자가 교정 + 자동 커밋 + 자동 테스트.</sub> |
 | <sub>🧬&nbsp;**신경계&nbsp;(자동&nbsp;반응)**</sub> | <sub>`.claude/settings.json`</sub> | <sub>`PreToolUse` 위험 명령 차단 / `Stop` 시 자동 테스트. ([HOOKS.md](docs/HOOKS.md))</sub> |
-| <sub>🎓&nbsp;**습관&nbsp;(반복&nbsp;능력)**</sub> | <sub>`.claude/skills/{bootstrap,docker-init,harness,review}.md` + `templates/{type}/`</sub> | <sub>슬래시 스킬 4종 + 종류별 템플릿 정본.</sub> |
+| <sub>🎓&nbsp;**습관&nbsp;(반복&nbsp;능력)**</sub> | <sub>`.claude/skills/{bootstrap,docker-init,harness,review}.md` + `templates/{type}/`</sub> | <sub>슬래시 스킬 4종 + 종류별 템플릿 정본. ai-ml 종류면 bootstrap 이 `templates/ai-ml/{scripts,skills}/*` 를 사용자 프로젝트로 덮어써 `/harness` 가 ml 통합본으로 동작.</sub> |
 | <sub>🏠&nbsp;**환경&nbsp;(몸이&nbsp;사는&nbsp;곳)**</sub> | <sub>`env_docker/{Dockerfile,docker-compose.yml,...}` (생성물) ← `.claude/skills/docker_examples/` (참고 예시)</sub> | <sub>격리된 컨테이너. `/docker-init` 이 예시 패턴을 참고해 종류·스택에 맞게 dev 컨테이너 + 사이드 서비스를 형제로 생성. 환경 도커 파일 일체가 `env_docker/` 한 폴더에 — 루트는 사용자 프로젝트 영역으로 비워둠. **호스트는 Docker 만 있다고 가정** — 모든 런타임·도구는 컨테이너 안.</sub> |
 
 > 충돌이 생기면 항상 헌법(`CLAUDE.md`)이 우선합니다.
@@ -140,7 +140,9 @@ claude                       # 컨테이너 Claude Code (호스트 세션과 별
 | `scripts/test_execute.py` | pytest 기반 자동 검증 (Stop hook 이 매 응답 종료 시 실행) |
 | `phases/{task}/...` | `/harness` 가 생성한 step 파일과 진행 상태 |
 | `.claude/settings.json` | Claude Code hooks (PreToolUse 차단, Stop 자동 검증) |
-| `.claude/skills/{bootstrap,docker-init,harness,review}.md` | 슬래시 스킬 정본 |
+| `.claude/skills/{bootstrap,docker-init,harness,review}.md` | 슬래시 스킬 정본 (SWE default — ai-ml 종류면 bootstrap 이 `templates/ai-ml/skills/harness.md` 로 덮어쓰기) |
+| `.claude/skills/templates/ai-ml/scripts/{execute,test_execute,crash_classifier}.py` | ml 통합본 정본 박물관. bootstrap 이 ai-ml 선택 시 `scripts/` 로 덮어쓰기 |
+| `.claude/skills/templates/ai-ml/skills/harness.md` | ml 라이프사이클 9 단계 정본. bootstrap 이 ai-ml 선택 시 `.claude/skills/harness.md` 로 덮어쓰기 |
 | `.claude/skills/templates/{type}/` | bootstrap 이 종류별로 `docs/` 에 복사하는 정본 (PRD/ARCH/ADR + 추가 docs) |
 | `.claude/skills/docker_examples/{Dockerfile,docker-compose.yml}` | `/docker-init` 이 참고하는 컨테이너 예시 (정본 — 손대지 않음). 환경은 프로젝트마다 달라지므로 패턴만 참고 |
 

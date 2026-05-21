@@ -43,16 +43,20 @@ bootstrap 은 한 줄도 본문을 작성하지 않는다.
 
 | 카테고리 | 파일 |
 |---------|------|
-| 스킬 | `.claude/skills/{bootstrap,harness,docker-init,review}.md` |
-| 종류별 템플릿 정본 | `.claude/skills/templates/{web,mobile,backend,ai-ml,data-pipeline,cli-lib}/*.md` |
+| 스킬 | `.claude/skills/{bootstrap,harness,docker-init,review}.md` (SWE 정본 — 루트) |
+| 종류별 템플릿 정본 (docs) | `.claude/skills/templates/{web,mobile,backend,ai-ml,data-pipeline,cli-lib}/*.md` |
+| 종류별 오버라이드 정본 (scripts/skills) | `.claude/skills/templates/ai-ml/scripts/{execute.py,test_execute.py,crash_classifier.py}` + `.claude/skills/templates/ai-ml/skills/harness.md` (ai-ml 만 — 다른 종류는 SWE 정본 그대로) |
 | 공용 템플릿 정본 | `.claude/skills/templates/PRD_VIEW.md` (PRD 검수 13 View) |
 | 훅 | `.claude/settings.json` |
-| 스크립트 | `scripts/{execute,test_execute}.py` |
+| 스크립트 (default = SWE 정본) | `scripts/{execute,test_execute}.py` |
 | 컨테이너 참고 예시 | `.claude/skills/docker_examples/{Dockerfile,docker-compose.yml}` |
 | 헌법 / 협업 가이드 | `CLAUDE.md`, `LLM_GUIDE.md` |
 | 도메인 docs | `docs/{PRD,ARCHITECTURE,ADR,HOOKS}.md` |
 
 누락이 있으면 표로 보여주고 종료 — 재클론 안내(`git clone <레포 URL> .` → `rm -rf .git` → `git init`).
+
+**ai-ml 박물관 누락** (`templates/ai-ml/scripts/*` 또는 `templates/ai-ml/skills/harness.md` 가 없음): 다른 종류라면 무시하고 진행 OK. ai-ml 종류라면 §3-B 가 동작 못함 → 재클론 안내 후 종료.
+
 모두 있으면 한 줄 보고 후 다음 단계: "인프라 정본 ✅ 모두 확인됨."
 
 ---
@@ -126,12 +130,118 @@ bootstrap 은 한 줄도 본문을 작성하지 않는다.
   ```
   (a) 선택 시 `docs/_archive/{YYYYMMDD-HHMMSS}/` 로 옮기고 새 템플릿 복사.
 
-**손대지 않는 것** (사용자 답에 따라 절대 바꾸지 마라):
+**손대지 않는 것** (사용자 답에 따라 절대 바꾸지 마라 — 단, ai-ml 종류는 §3-B 의 오버라이드 예외):
 - `CLAUDE.md` — 정본 유지. 플레이스홀더는 사용자가 본문 결정 후 직접 채운다.
 - `LLM_GUIDE.md`, `docs/HOOKS.md` — 정본 유지.
-- `.claude/settings.json`, `.claude/skills/*` (참고 예시 `.claude/skills/docker_examples/` 포함), `scripts/*`.
+- `.claude/skills/docker_examples/*` — 참고 예시 정본.
+- `.claude/settings.json` / `scripts/*` / `.claude/skills/{bootstrap,harness,docker-init,review}.md` — **SWE default 정본**. ai-ml 종류일 때만 §3-B 의 오버라이드 표 4 + 1 파일에 한해 교체.
 
 **부수**: `phases/index.json` 이 없으면 `{"phases": []}` 로 생성. 있으면 손대지 마라.
+
+---
+
+### 3-B. ai-ml 종류 한정 — scripts + skill 오버라이드 (실제 명령)
+
+다른 종류(web/mobile/backend/data-pipeline/cli-lib/custom)는 이 절을 통째로 건너뛴다. SWE default 그대로 유지.
+
+**ai-ml 종류로 결정됐을 때만** 다음 정본을 사용자 프로젝트로 덮어쓴다.
+
+| 원본 (정본 박물관) | 대상 (사용자 프로젝트) | 비고 |
+|------------------|---------------------|------|
+| `.claude/skills/templates/ai-ml/scripts/*.py` | `scripts/*.py` | execute / test_execute / crash_classifier / monitor / heartbeat / budget / fairness — glob 으로 모두 복사 |
+| `.claude/skills/templates/ai-ml/scripts/*.md` | `scripts/*.md` | README.md (헬퍼 구조 + 필드 카탈로그) |
+| `.claude/skills/templates/ai-ml/skills/harness.md` | `.claude/skills/harness.md` | SWE default → ml 통합본 워크플로우 |
+| (`.claude/settings.json` PreToolUse 패턴) | (in-place 갱신) | §3-B-3 참고 |
+
+#### 3-B-1. 사용자 콘텐츠 검사 (git status 기반)
+
+`git` 으로 SWE default 가 수정됐는지 확인. 어느 한 파일이라도 *unstaged 변경* 또는 *untracked* 면 사용자 콘텐츠 의심 — archive 옵션 제시.
+
+```bash
+# scripts/ 전체와 .claude/skills/harness.md 의 dirty 상태 점검
+DIRTY=$(git status --porcelain scripts/ .claude/skills/harness.md 2>/dev/null | awk '{print $2}')
+```
+
+`DIRTY` 가 비어 있으면 정본 그대로 → 바로 §3-B-2 로. 비어 있지 않으면:
+
+```
+ai-ml 오버라이드 — 다음 파일이 SWE default 와 다릅니다 (사용자 수정 의심):
+  {dirty 목록}
+
+어떻게 할까요?
+  (a) _archive/{YYYYMMDD-HHMMSS}/ 로 백업 후 덮어쓰기 (추천)
+  (b) 그대로 덮어쓰기 — 기존 내용 사라짐
+  (c) 취소 — bootstrap 종료
+```
+
+(a) 선택 시:
+```bash
+TS=$(date +%Y%m%d-%H%M%S)
+mkdir -p _archive/$TS
+for f in $DIRTY; do
+  mkdir -p _archive/$TS/$(dirname $f)
+  mv "$f" "_archive/$TS/$f"
+done
+```
+
+#### 3-B-2. 정본 복사
+
+박물관의 `scripts/` 안 모든 `.py` 와 `.md` (README 포함) 를 glob 으로 복사. 박물관에 새 헬퍼가 추가돼도 명령은 그대로 동작.
+
+```bash
+mkdir -p scripts
+cp .claude/skills/templates/ai-ml/scripts/*.py scripts/
+cp .claude/skills/templates/ai-ml/scripts/*.md scripts/    # README.md 등 헬퍼 문서
+cp .claude/skills/templates/ai-ml/skills/harness.md .claude/skills/harness.md
+```
+
+복사되는 파일 (현재 정본 기준):
+- `scripts/{execute,test_execute,crash_classifier,monitor,heartbeat,budget,fairness}.py` (7 개)
+- `scripts/README.md` (헬퍼 구조 + step.json ml 필드 카탈로그)
+- `.claude/skills/harness.md` (ml 통합본 워크플로우)
+
+`__pycache__` 디렉터리는 `*.py` 글롭에 안 잡혀 자동 제외.
+
+#### 3-B-3. `.claude/settings.json` PreToolUse 패턴에 ml 차단 추가
+
+ai-ml 종류는 가중치 파일/`runs/` 통째 삭제/데이터 강제 add 사고가 흔하다. 기존 SWE 패턴(`rm -rf|git push --force|git reset --hard|DROP TABLE`) 에 다음을 OR 로 추가:
+
+| ml 패턴 | 차단 의도 |
+|--------|---------|
+| `rm -rf runs/` | 실험 결과 통째 삭제 |
+| `git add .*\.(pt\|pth\|ckpt\|safetensors)` | 가중치 커밋 (레포 비대화) |
+| `git add -f data/` | gitignore 우회한 데이터 강제 추가 |
+
+적용 방법 — Python 한 줄로 in-place 갱신 (jq 가 없을 수 있어 Python 사용):
+
+```bash
+python3 - <<'PY'
+import json
+from pathlib import Path
+p = Path(".claude/settings.json")
+cfg = json.loads(p.read_text())
+ml_extra = r"|rm\s+-rf\s+runs/|git\s+add\s+.*\.(pt|pth|ckpt|safetensors)|git\s+add\s+-f\s+data/"
+for hook in cfg.get("hooks", {}).get("PreToolUse", []):
+    for h in hook.get("hooks", []):
+        if "command" in h and ml_extra not in h["command"]:
+            # grep -qE '...' 패턴의 닫는 따옴표 앞에 OR 추가
+            h["command"] = h["command"].replace(r"DROP\s+TABLE'", "DROP\\s+TABLE" + ml_extra + "'")
+p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False) + "\n")
+print("settings.json: PreToolUse 패턴에 ml 차단 추가 완료")
+PY
+```
+
+idempotent: 이미 추가돼 있으면 (`ml_extra` 가 command 안에 있으면) skip.
+
+#### 3-B-4. 적용 후 회귀 검증
+
+ml 통합본 테스트가 통과하는지 자동 확인:
+
+```bash
+python3 -m pytest scripts/test_execute.py --tb=short 2>&1 | tail -5
+```
+
+기대 결과: `91 passed, 2 skipped` (또는 jq 설치 환경에서 `93 passed`). 실패 시 사용자에게 보고하고 archive 에서 원상복구 안내.
 
 ---
 
@@ -145,6 +255,12 @@ bootstrap 은 한 줄도 본문을 작성하지 않는다.
 - CLAUDE.md: 🔒 정본 유지 (사용자가 직접 채우세요)
 - phases/index.json: 🆕 빈 배열 생성 / 🔒 기존 유지
 - docs/_archive/{ts}/: 🆕 기존 docs 이동됨 (해당 시에만)
+
+(ai-ml 종류 한정 — §3-B 가 실제 적용된 경우에만 다음 줄을 추가):
+- scripts/{execute,test_execute,crash_classifier}.py + .claude/skills/harness.md: 🔄 ml 통합본으로 교체 ({N}/4 파일)
+- .claude/settings.json: 🔄 PreToolUse 패턴에 ml 차단 추가 (runs/ 삭제 / 가중치 add / 데이터 강제 add)
+- ml 테스트 회귀 검증: ✅ {91 passed, 2 skipped} / ❌ {실패 시 archive 경로 안내}
+- _archive/{ts}/: 🆕 기존 SWE scripts/harness 이동됨 (사용자 콘텐츠 의심 시에만)
 ```
 
 ⚠️ 가 있으면 (예: archive 이동, custom 분기 안내) 한 줄로 따로 강조한다.
@@ -162,7 +278,7 @@ bootstrap 은 한 줄도 본문을 작성하지 않는다.
 2. 종류별 추가 docs 도 같은 방식으로 채우세요 (예: web 의 UI_GUIDE.md, ai-ml 의 DATA_CARD.md).
 3. 채운 뒤 새 메시지에서 /docker-init 을 호출하세요. 종류·스택에 맞는 격리 환경 일체(`env_docker/{Dockerfile,docker-compose.yml,...}`)를 한 폴더 안에 만듭니다 — 호스트는 Docker 만 있다고 가정합니다.
 4. `docker compose -f env_docker/docker-compose.yml up -d --build && docker compose -f env_docker/docker-compose.yml exec dev bash` (또는 `make up && make shell`) 로 컨테이너 진입. 셸 안에서 `claude` 를 실행해 이후 작업을 컨테이너 안에서 합니다.
-5. /harness 로 첫 phase 를 설계하세요.
+5. `/harness` 로 첫 phase 를 설계하세요. (ai-ml 종류라면 `/harness` 가 ml 통합본으로 깔려 있어 데이터/모델/loss sanity, 실험 step, comparison, ablation, inference bench 등 ML 라이프사이클 9 단계 패턴을 자동으로 다룹니다.)
 ```
 
 끝. 첫 phase 후보 제안·Docker 인계 요약·산출물 일람표 같은 무거운 마무리는 하지 않는다.
@@ -173,7 +289,7 @@ bootstrap 은 한 줄도 본문을 작성하지 않는다.
 
 - **본문을 채우지 마라.** PRD/ARCHITECTURE/ADR 의 `{}` 플레이스홀더는 사용자가 직접 채운다.
 - **묵묵히 추측하지 마라.** 답이 모호한 자리에서는 항상 대안 2~4개를 제시한다 ([LLM_GUIDE.md](../../LLM_GUIDE.md) 1·4 원칙).
-- **정본 파일을 사용자 답에 따라 바꾸지 마라.** `.claude/settings.json`, `.claude/skills/*` (참고 예시 `.claude/skills/docker_examples/` 포함), `scripts/*`, `docs/HOOKS.md`, `LLM_GUIDE.md`.
+- **정본 파일을 사용자 답에 따라 바꾸지 마라.** `.claude/skills/docker_examples/`, `docs/HOOKS.md`, `LLM_GUIDE.md`. <br>**예외**: ai-ml 종류일 때 §3-B 의 표(`scripts/*` 4 + 1 파일 + `.claude/skills/harness.md` + `.claude/settings.json` 의 PreToolUse 패턴)에 한해 박물관 정본으로 교체. 그 외에는 바꾸지 마라.
 - **CLAUDE.md 의 플레이스홀더를 채우지 마라.** 결정의 깊이는 본문 작성 단계의 것이다.
 - **Dockerfile / compose 를 만들지 마라.** `docker-init` 책임이다.
 - **6렌즈, CRITICAL 능동 도출, 위험 매핑, 자체 검증 10항목 같은 무거운 절차를 부활시키지 마라.** 가벼운 스킬 의도와 정면 충돌한다.

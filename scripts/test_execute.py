@@ -267,6 +267,14 @@ class TestBuildPreamble:
         result = executor._build_preamble("", "")
         assert str(ex.StepExecutor.MAX_RETRIES) in result
 
+    def test_max_attempts_override_appears(self, executor):
+        result = executor._build_preamble("", "", max_attempts=7)
+        assert "7회 수정 시도" in result
+
+    def test_max_attempts_none_falls_back_to_default(self, executor):
+        result = executor._build_preamble("", "", max_attempts=None)
+        assert f"{ex.StepExecutor.MAX_RETRIES}회 수정 시도" in result
+
     def test_includes_index_path(self, executor):
         result = executor._build_preamble("", "")
         assert "/phases/0-mvp/index.json" in result
@@ -469,6 +477,24 @@ class TestInvokeClaude:
 
         assert mock_run.call_args[1]["timeout"] == 1800
 
+    def test_timeout_from_step_override(self, executor):
+        mock_result = MagicMock(returncode=0, stdout="{}", stderr="")
+        step = {"step": 2, "name": "ui", "timeout_sec": 7200}
+
+        with patch("subprocess.run", return_value=mock_result) as mock_run:
+            executor._invoke_claude(step, "preamble")
+
+        assert mock_run.call_args[1]["timeout"] == 7200
+
+    def test_timeout_default_when_field_missing(self, executor):
+        mock_result = MagicMock(returncode=0, stdout="{}", stderr="")
+        step = {"step": 2, "name": "ui"}
+
+        with patch("subprocess.run", return_value=mock_result) as mock_run:
+            executor._invoke_claude(step, "preamble")
+
+        assert mock_run.call_args[1]["timeout"] == ex.StepExecutor.DEFAULT_TIMEOUT_SEC
+
 
 # ---------------------------------------------------------------------------
 # progress_indicator (= 이전 Spinner)
@@ -557,3 +583,4 @@ class TestCheckBlockers:
         with pytest.raises(SystemExit) as exc_info:
             inst._check_blockers()
         assert exc_info.value.code == 2
+
